@@ -1,9 +1,13 @@
 import struct
+import threading
+import urllib.request
+import re
+import os
 
 bl_info = {
     "name": "XBG Importer",
-    "author": "Quiet Joker",
-    "version": (2, 0, 0),  # V2.0: Bug fixes (13), export normals, LOD peek, vertex compaction
+    "author": "Quiet Joker, JasperZebra",
+    "version": (2, 1, 5),
     "blender": (5, 0, 0),
     "location": "View3D > Sidebar > XBG Import",
     "description": "Import XBG models from James Cameron's Avatar The Game",
@@ -17,6 +21,63 @@ from .modules.export_xbg import XBGExporter
 from .modules.debug import VerboseLogger
 
 
+# ---------------------------------------------------------------------------
+# Auto-updater
+# ---------------------------------------------------------------------------
+
+_RAW_BASE = "https://raw.githubusercontent.com/Quiet-Joker/Avatar-XBG-Blender-Importer/Dev/"
+
+_MODULE_FILES = [
+    "__init__.py",
+    "modules/binary.py",
+    "modules/bounds.py",
+    "modules/debug.py",
+    "modules/export_xbg.py",
+    "modules/import_xbg.py",
+    "modules/materials.py",
+    "modules/mesh.py",
+    "modules/nodes.py",
+    "modules/skeleton.py",
+    "modules/uv.py",
+    "modules/weights.py",
+    "modules/xbt.py",
+]
+
+_update_status = None   # None = not checked, "up_to_date", or "vX.X.X available"
+_update_error  = None   # set if network fetch failed
+
+
+def _fetch_remote_version():
+    """Fetch remote __init__.py and return version tuple, or None on failure."""
+    try:
+        url = _RAW_BASE + "__init__.py"
+        req = urllib.request.urlopen(url, timeout=8)
+        text = req.read(4096).decode("utf-8", errors="ignore")
+        m = re.search(r'"version"\s*:\s*\((\d+),\s*(\d+),\s*(\d+)\)', text)
+        if m:
+            return (int(m.group(1)), int(m.group(2)), int(m.group(3)))
+    except Exception:
+        pass
+    return None
+
+
+def _check_update_thread():
+    global _update_status, _update_error
+    remote = _fetch_remote_version()
+    if remote is None:
+        _update_error = "Could not reach update server."
+        return
+    local = bl_info["version"]
+    if remote > local:
+        _update_status = f"v{remote[0]}.{remote[1]}.{remote[2]} available"
+    else:
+        _update_status = "up_to_date"
+
+
+# ---------------------------------------------------------------------------
+# Addon preferences
+# ---------------------------------------------------------------------------
+
 class XBGAddonPreferences(bpy.types.AddonPreferences):
     bl_idname = __name__
     data_folder: bpy.props.StringProperty(
@@ -25,10 +86,14 @@ class XBGAddonPreferences(bpy.types.AddonPreferences):
         default="",
         subtype='DIR_PATH'
     )
-    
+
     def draw(self, ctx):
         self.layout.prop(self, "data_folder")
 
+
+# ---------------------------------------------------------------------------
+# Property groups
+# ---------------------------------------------------------------------------
 
 class XBGImportSettings(bpy.types.PropertyGroup):
     load_textures: bpy.props.BoolProperty(
@@ -142,23 +207,19 @@ class XBGDebugSettings(bpy.types.PropertyGroup):
         description="Import XBT textures as DDS files instead of PNG. WARNING: DDS format will cause texture painting corruption! Use PNG (default) for texture painting",
         default=False
     )
-    # NEW: MB2O toggle
     use_mb2o: bpy.props.BoolProperty(
         name="Use MB2O Transforms",
         description="Apply MB2O bind matrices to skeleton (if available). Disable if bones are mispositioned. Default: OFF",
         default=False
     )
-    # Store file info data
     file_info_data: bpy.props.StringProperty(
         name="File Info Data",
         default=""
     )
-    # LOD peek result string (shown in panel after using Peek LOD Count button)
     lod_peek_result: bpy.props.StringProperty(
         name="LOD Peek Result",
         default=""
     )
-    # NEW: Vertex compaction toggle
     compact_vertices: bpy.props.BoolProperty(
         name="Compact Vertices (Remove Unused)",
         description="Remove unused vertices during import. A vertex mapping is stored to ensure correct export positions. Recommended for cleaner editing.",
@@ -171,16 +232,19 @@ class XBGDebugSettings(bpy.types.PropertyGroup):
         default=False
     )
 
+# ---------------------------------------------------------------------------
+# Operators — import / export
+# ---------------------------------------------------------------------------
 
 class XBG_OT_Import(bpy.types.Operator):
     bl_idname = "import_scene.xbg_model"
     bl_label = "Import XBG"
     bl_options = {'REGISTER', 'UNDO'}
-    
+
     filepath: bpy.props.StringProperty(subtype="FILE_PATH")
     files: bpy.props.CollectionProperty(type=bpy.types.OperatorFileListElement)
     directory: bpy.props.StringProperty(subtype="DIR_PATH")
-    
+
     import_mesh_only: bpy.props.BoolProperty(
         name="Import Mesh Only",
         description="Skip skeleton import and rigging",
@@ -198,38 +262,32 @@ class XBG_OT_Import(bpy.types.Operator):
         min=0,
         max=10
     )
-    
+
     def draw(self, context):
         layout = self.layout
-        
         box = layout.box()
         box.label(text="LOD Selection:", icon='MOD_MULTIRES')
         box.prop(self, "import_all_lods")
-        
         row = box.row()
         row.enabled = not self.import_all_lods
         row.prop(self, "lod_level")
-        
         if not self.import_all_lods:
             box.label(text=f"Will import LOD {self.lod_level} only", icon='INFO')
         else:
             box.label(text="Will import ALL LODs", icon='INFO')
-        
         box = layout.box()
         box.label(text="Other Options:", icon='PREFERENCES')
         box.prop(self, "import_mesh_only")
-    
+
     def invoke(self, ctx, ev):
         ctx.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
-    
+
     def execute(self, ctx):
         s, ds, p = ctx.scene.xbg_settings, ctx.scene.xbg_debug_settings, ctx.preferences.addons[__name__].preferences
         VerboseLogger.enabled = ds.verbose_logging
-
         df, lt, lhd = p.data_folder, s.load_textures, s.load_hd_textures
 
-        # Bug fix: use proper if block instead of silent walrus
         if lt and not df:
             self.report({'WARNING'}, "Data folder not set - textures will not be loaded")
             lt = False
@@ -237,7 +295,6 @@ class XBG_OT_Import(bpy.types.Operator):
         imp = XBGBlenderImporter()
         tl = -1 if self.import_all_lods else self.lod_level
 
-        # Collect valid .xbg file paths
         fs = []
         if self.files:
             for f in self.files:
@@ -246,7 +303,6 @@ class XBG_OT_Import(bpy.types.Operator):
         elif self.filepath.lower().endswith(".xbg"):
             fs.append(self.filepath)
 
-        # Bug fix #1: actually return CANCELLED instead of silently continuing
         if not fs:
             self.report({'ERROR'}, "No valid .xbg files selected")
             return {'CANCELLED'}
@@ -254,22 +310,21 @@ class XBG_OT_Import(bpy.types.Operator):
         ic = 0
         if ds.import_xbt_as_dds:
             self.report({'WARNING'}, "DDS Import Mode enabled - Texture painting will be corrupted! Use PNG mode for texture painting.")
-        
+
         for fp in fs:
             try:
-                # NEW: Pass use_mb2o and compact_vertices parameters
                 imp.load(
                     ctx, fp, tl, self.import_mesh_only, df, lt, lhd,
                     ds.flip_normals, ds.use_xml_assembly, ds.separate_primitives,
                     ds.show_format_bounds, ds.import_xbt_as_dds,
-                    ds.use_mb2o,  # MB2O parameter
+                    ds.use_mb2o,
                     ds.compact_vertices,  # NEW: Vertex compaction parameter
-                    ds.reorient_bones,  # NEW: Bone Orientation
+                    ds.reorient_bones,    # NEW: Bone Orientation
                 )
                 ic += 1
             except Exception as e:
                 self.report({'WARNING'}, f"Failed to import {os.path.basename(fp)}: {str(e)}")
-        
+
         if ic > 0:
             self.report({'INFO'}, f"Imported {ic} XBG file(s)")
             return {'FINISHED'}
@@ -282,7 +337,7 @@ class XBG_OT_QuickSetScale(bpy.types.Operator):
     bl_idname = "xbg.quick_set_scale"
     bl_label = "Set Scale"
     value: bpy.props.FloatProperty()
-    
+
     def execute(self, ctx):
         ctx.scene.xbg_export_settings.target_game_scale = self.value
         return {'FINISHED'}
@@ -292,7 +347,7 @@ class XBG_OT_MergeAllMeshes(bpy.types.Operator):
     bl_idname = "xbg.merge_all_meshes"
     bl_label = "Merge All Meshes"
     bl_options = {'REGISTER', 'UNDO'}
-    
+
     def execute(self, ctx):
         from .modules.debug import merge_duplicate_vertices
         ds = ctx.scene.xbg_debug_settings
@@ -309,7 +364,7 @@ class XBG_OT_MergeSelectedMesh(bpy.types.Operator):
     bl_idname = "xbg.merge_selected_mesh"
     bl_label = "Merge Selected Mesh"
     bl_options = {'REGISTER', 'UNDO'}
-    
+
     def execute(self, ctx):
         from .modules.debug import merge_duplicate_vertices
         ds = ctx.scene.xbg_debug_settings
@@ -327,28 +382,27 @@ class XBG_OT_Export(bpy.types.Operator):
     bl_label = "Export XBG (Inject)"
     bl_options = {'REGISTER', 'UNDO'}
     filepath: bpy.props.StringProperty(subtype="FILE_PATH")
-    
+
     def invoke(self, ctx, ev):
         obj = ctx.active_object
         obj and "xbg_data" in obj and setattr(self, 'filepath', obj["xbg_data"]["filepath"])
         ctx.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
-    
+
     def execute(self, ctx):
         obj = ctx.active_object
-        # Bug fix #1: actually return CANCELLED instead of silently continuing
         if not obj:
             self.report({'ERROR'}, "No active object selected")
             return {'CANCELLED'}
 
         ds, es = ctx.scene.xbg_debug_settings, ctx.scene.xbg_export_settings
         VerboseLogger.enabled = ds.verbose_logging
-        
+
         if "xbg_data" in obj:
             from .modules.debug import analyze_export_scale
             m = obj["xbg_data"].to_dict()
             analyze_export_scale(obj, m.get("pos_scale", 1.0), m.get("import_mesh_only", False))
-        
+
         exp = XBGExporter()
         st, msg = exp.export(ctx, obj, self.filepath, es.auto_scale_to_bounds, es.show_scale_info, es.ignore_format_limits)
         if st == {'FINISHED'}:
@@ -393,9 +447,6 @@ class XBG_OT_PeekLODs(bpy.types.Operator):
 
     @staticmethod
     def _peek_lod_count(filepath):
-        """Read only the file header and find the SDOL chunk to get LOD count.
-        Reads at most 4 KB on the first pass — much faster than a full parse.
-        """
         fsize = os.path.getsize(filepath)
         with open(filepath, 'rb') as f:
             data = f.read(min(fsize, 4096))
@@ -403,12 +454,10 @@ class XBG_OT_PeekLODs(bpy.types.Operator):
         if len(data) < 32:
             return 0
 
-        # File layout: 4-byte magic + 7 signed ints; chunk count is the 7th
         cc = struct.unpack_from('<i', data, 28)[0]
-        offset = 32  # start of first chunk
+        offset = 32
 
-        for _ in range(min(cc, 64)):  # cap iteration for safety
-            # If chunk header not in the 4 KB window, seek in the real file
+        for _ in range(min(cc, 64)):
             if offset + 12 > len(data):
                 with open(filepath, 'rb') as f:
                     f.seek(offset)
@@ -418,7 +467,7 @@ class XBG_OT_PeekLODs(bpy.types.Operator):
                 chunk_sig = hdr[:4].decode('utf-8', 'ignore')
                 chunk_size = struct.unpack_from('<i', hdr, 8)[0]
                 if chunk_sig == 'SDOL':
-                    lod_off = offset + 20  # +12 chunk header +8 skip two ints
+                    lod_off = offset + 20
                     with open(filepath, 'rb') as f:
                         f.seek(lod_off)
                         lc = f.read(4)
@@ -432,10 +481,9 @@ class XBG_OT_PeekLODs(bpy.types.Operator):
             chunk_size = struct.unpack_from('<i', data, offset + 8)[0]
 
             if chunk_sig == 'SDOL':
-                lod_off = offset + 20  # +12 chunk header +8 skip two ints
+                lod_off = offset + 20
                 if lod_off + 4 <= len(data):
                     return max(0, struct.unpack_from('<i', data, lod_off)[0])
-                # Straddling the 4 KB boundary
                 with open(filepath, 'rb') as f:
                     f.seek(lod_off)
                     lc = f.read(4)
@@ -448,6 +496,66 @@ class XBG_OT_PeekLODs(bpy.types.Operator):
         return 0
 
 
+# ---------------------------------------------------------------------------
+# Operators — updater
+# ---------------------------------------------------------------------------
+
+class XBG_OT_CheckForUpdates(bpy.types.Operator):
+    """Check GitHub for plugin updates"""
+    bl_idname = "xbg.check_for_updates"
+    bl_label = "Check for Updates"
+
+    def execute(self, context):
+        global _update_status, _update_error
+        _update_status = None
+        _update_error  = None
+        threading.Thread(target=_check_update_thread, daemon=True).start()
+        self.report({'INFO'}, "Checking for updates...")
+        return {'FINISHED'}
+
+
+class XBG_OT_ApplyUpdate(bpy.types.Operator):
+    """Download and install the latest version from GitHub"""
+    bl_idname = "xbg.apply_update"
+    bl_label = "Update Now"
+
+    def execute(self, context):
+        plugin_dir = os.path.dirname(os.path.abspath(__file__))
+        failed = []
+
+        for rel_path in _MODULE_FILES:
+            url = _RAW_BASE + rel_path
+            dest = os.path.join(plugin_dir, rel_path.replace("/", os.sep))
+
+            # Make sure the target directory exists (e.g. modules/)
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+
+            try:
+                req = urllib.request.urlopen(url, timeout=30)
+                data = req.read()
+                with open(dest, 'wb') as f:
+                    f.write(data)
+            except Exception as e:
+                failed.append(f"{rel_path}: {e}")
+
+        global _update_status
+        _update_status = None  # reset so user can re-check after restart
+
+        if failed:
+            self.report({'WARNING'},
+                f"Update partially failed — {len(failed)} file(s) not downloaded. "
+                f"Check console for details. Restart Blender for partial changes.")
+            for msg in failed:
+                print(f"[XBG Updater] FAILED: {msg}")
+        else:
+            self.report({'INFO'}, "Update complete! Restart Blender to apply.")
+
+        return {'FINISHED'}
+
+
+# ---------------------------------------------------------------------------
+# Panels
+# ---------------------------------------------------------------------------
 
 class XBG_PT_Panel(bpy.types.Panel):
     bl_label = "XBG Import"
@@ -455,27 +563,47 @@ class XBG_PT_Panel(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "XBG Import"
-    
+
     def draw(self, ctx):
         l, s, p = self.layout, ctx.scene.xbg_settings, ctx.preferences.addons[__name__].preferences
-        
+
+        # --- Update status bar ---
+        if _update_status is None and _update_error is None:
+            row = l.row()
+            row.operator("xbg.check_for_updates", text="Check for Updates", icon="FILE_REFRESH")
+        elif _update_error:
+            row = l.row()
+            row.label(text="Update check failed", icon="ERROR")
+            row.operator("xbg.check_for_updates", text="Retry", icon="FILE_REFRESH")
+        elif _update_status == "up_to_date":
+            row = l.row()
+            row.label(text="Tool is up to date", icon="CHECKMARK")
+            row.operator("xbg.check_for_updates", text="", icon="FILE_REFRESH")
+        else:
+            box = l.box()
+            box.label(text=f"Update available: {_update_status}", icon="INFO")
+            row = box.row()
+            row.operator("xbg.apply_update", text="Update Now", icon="IMPORT")
+            row.operator("xbg.check_for_updates", text="", icon="FILE_REFRESH")
+
+        l.separator()
+
         b = l.box()
         b.label(text="Game Data Folder:", icon='FILE_FOLDER')
         b.prop(p, "data_folder", text="")
-        
+
         b = l.box()
         b.label(text="Import Options:", icon='PREFERENCES')
         b.prop(s, "load_textures")
         r = b.row()
         r.enabled = s.load_textures
         r.prop(s, "load_hd_textures")
-        
+
         l.separator()
         r = l.row()
         r.scale_y = 1.5
         r.operator("import_scene.xbg_model", icon='IMPORT')
 
-        # LOD Peek: let the user check LOD count before committing to an import
         pb = l.box()
         pb.label(text="LOD Preview:", icon='MOD_MULTIRES')
         pb.operator("xbg.peek_lods", text="Peek LOD Count...", icon='VIEWZOOM')
@@ -489,7 +617,7 @@ class XBG_PT_Panel(bpy.types.Panel):
         b = l.box()
         b.label(text="Export (Re-Inject):", icon='EXPORT')
         obj, es = ctx.active_object, ctx.scene.xbg_export_settings
-        
+
         if obj and "xbg_joined" in obj:
             wb = b.box()
             wb.alert = True
@@ -501,10 +629,10 @@ class XBG_PT_Panel(bpy.types.Panel):
             b.label(text=f"Linked: {os.path.basename(obj['xbg_data']['filepath'])}", icon='LINKED')
             m = obj["xbg_data"].to_dict()
             ps, imo = m.get("pos_scale", 1.0), m.get("import_mesh_only", False)
-            
+
             exp = XBGExporter()
             ns, rs, si = exp.calculate_required_scale(obj, ps, imo)
-            
+
             if not es.override_game_scale:
                 ib = b.box()
                 if ns:
@@ -520,7 +648,7 @@ class XBG_PT_Panel(bpy.types.Panel):
                     )
                 else:
                     ib.label(text="✓ Mesh fits within bounds", icon='CHECKMARK')
-            
+
             sb = b.box()
             sb.label(text="Export Options:", icon='SETTINGS')
             sb.prop(es, "auto_scale_to_bounds")
@@ -528,7 +656,7 @@ class XBG_PT_Panel(bpy.types.Panel):
             sb.separator()
             sb.label(text=f"Current Scale: {m['pos_scale']:.6f}", icon='LINENUMBERS_ON')
             sb.prop(es, "override_game_scale")
-            
+
             if es.override_game_scale:
                 r = sb.row()
                 r.prop(es, "target_game_scale")
@@ -537,19 +665,18 @@ class XBG_PT_Panel(bpy.types.Panel):
                 op.value = m['pos_scale'] * 2
                 op = r.operator("xbg.quick_set_scale", text="x0.5")
                 op.value = m['pos_scale'] * 0.5
-            
+
             sb.separator()
             dr = sb.row()
             dr.alert = True
             dr.prop(es, "ignore_format_limits")
-            
+
             r = b.row()
             r.scale_y = 1.3
             r.operator("export_scene.xbg_inject", text="Inject Mesh Data", icon='EXPORT')
         else:
             b.label(text="Select an imported XBG mesh", icon='INFO')
             b.enabled = False
-
 
 
 class XBG_PT_DebugPanel(bpy.types.Panel):
@@ -559,31 +686,29 @@ class XBG_PT_DebugPanel(bpy.types.Panel):
     bl_region_type = 'UI'
     bl_category = "XBG Import"
     bl_options = {'DEFAULT_CLOSED'}
-    
+
     def draw(self, ctx):
         l, ds = self.layout, ctx.scene.xbg_debug_settings
-        
+
         b = l.box()
         b.label(text="Logging:", icon='CONSOLE')
         b.prop(ds, "verbose_logging")
         b.prop(ds, "show_file_info")
-        
+
         if ds.show_file_info and ds.file_info_data:
             info_box = b.box()
             info_box.scale_y = 0.8
-            lines = ds.file_info_data.split('\n')
-            for line in lines:
+            for line in ds.file_info_data.split('\n'):
                 if line.strip():
                     row = info_box.row()
                     row.alignment = 'LEFT'
                     row.label(text=line)
-        
-        # NEW: MB2O Section
+
         l.separator()
         b = l.box()
         b.label(text="Advanced Skeleton:", icon='ARMATURE_DATA')
         b.prop(ds, "use_mb2o")
-        
+
         if ds.use_mb2o:
             i = b.box()
             i.label(text="MB2O Mode:", icon='INFO')
@@ -595,12 +720,12 @@ class XBG_PT_DebugPanel(bpy.types.Panel):
             i.label(text="EDON Mode (Default):", icon='INFO')
             i.label(text="Uses skeleton from EDON chunk")
             i.label(text="Standard bone transforms")
-        
+
         l.separator()
         b = l.box()
         b.label(text="Mesh Processing:", icon='MESH_DATA')
         b.prop(ds, "compact_vertices")
-        
+
         if ds.compact_vertices:
             i = b.box()
             i.label(text="Vertex Compaction Enabled:", icon='INFO')
@@ -613,11 +738,11 @@ class XBG_PT_DebugPanel(bpy.types.Panel):
             i.label(text="Compaction Disabled:", icon='ERROR')
             i.label(text="Ghost vertices will be visible")
             i.label(text="in Edit Mode")
-        
+
         b.separator()
         b.prop(ds, "flip_normals")
         b.prop(ds, "separate_primitives")
-        
+
         if ds.separate_primitives:
             i = b.box()
             i.label(text="Separate Primitives Mode:", icon='INFO')
@@ -631,7 +756,7 @@ class XBG_PT_DebugPanel(bpy.types.Panel):
             i.label(text="XML Assembly:", icon='INFO')
             i.label(text="Uses .xml files for bone transforms")
             i.label(text="Properly positions weapon parts")
-        
+
         b.separator()
         b.prop(ds, "auto_smooth_normals")
         b.separator()
@@ -640,12 +765,12 @@ class XBG_PT_DebugPanel(bpy.types.Panel):
         r = b.row(align=True)
         r.operator("xbg.merge_all_meshes", text="All Meshes")
         r.operator("xbg.merge_selected_mesh", text="Selected")
-        
+
         l.separator()
         b = l.box()
         b.label(text="Texture Import:", icon='TEXTURE')
         b.prop(ds, "import_xbt_as_dds")
-        
+
         if ds.import_xbt_as_dds:
             i = b.box()
             i.alert = True
@@ -653,12 +778,12 @@ class XBG_PT_DebugPanel(bpy.types.Panel):
             i.label(text="WARNING: Texture painting will be")
             i.label(text="corrupted with DDS format!")
             i.label(text="Use PNG (default) for painting.")
-        
+
         l.separator()
         b = l.box()
         b.label(text="Format Bounds:", icon='SHADING_BBOX')
         b.prop(ds, "show_format_bounds")
-        
+
         l.separator()
         b = l.box()
         b.label(text="Bounding Volumes:", icon='MESH_CUBE')
@@ -667,6 +792,10 @@ class XBG_PT_DebugPanel(bpy.types.Panel):
         if ds.show_bounding_box or ds.show_bounding_sphere:
             b.prop(ds, "bounds_display_type")
 
+
+# ---------------------------------------------------------------------------
+# Registration
+# ---------------------------------------------------------------------------
 
 classes = (
     XBGAddonPreferences,
@@ -679,6 +808,8 @@ classes = (
     XBG_OT_MergeSelectedMesh,
     XBG_OT_Export,
     XBG_OT_PeekLODs,
+    XBG_OT_CheckForUpdates,
+    XBG_OT_ApplyUpdate,
     XBG_PT_Panel,
     XBG_PT_DebugPanel,
 )
@@ -689,6 +820,8 @@ def register():
     bpy.types.Scene.xbg_settings = bpy.props.PointerProperty(type=XBGImportSettings)
     bpy.types.Scene.xbg_export_settings = bpy.props.PointerProperty(type=XBGExportSettings)
     bpy.types.Scene.xbg_debug_settings = bpy.props.PointerProperty(type=XBGDebugSettings)
+    # Kick off background version check on startup
+    threading.Thread(target=_check_update_thread, daemon=True).start()
 
 
 def unregister():
