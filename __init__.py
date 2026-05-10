@@ -164,6 +164,12 @@ class XBGDebugSettings(bpy.types.PropertyGroup):
         description="Remove unused vertices during import. A vertex mapping is stored to ensure correct export positions. Recommended for cleaner editing.",
         default=True
     )
+    # Bone reorientation toggle
+    reorient_bones: bpy.props.BoolProperty(
+        name="Reorient Bones",
+        description="Point each bone's tail toward its children, making the skeleton easier to read and pose. Leaf bones keep their original orientation.",
+        default=False
+    )
 
 
 class XBG_OT_Import(bpy.types.Operator):
@@ -258,6 +264,7 @@ class XBG_OT_Import(bpy.types.Operator):
                     ds.show_format_bounds, ds.import_xbt_as_dds,
                     ds.use_mb2o,  # MB2O parameter
                     ds.compact_vertices  # NEW: Vertex compaction parameter
+                    ds.reorient_bones,  # NEW: Bone Orientation
                 )
                 ic += 1
             except Exception as e:
