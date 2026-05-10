@@ -7,7 +7,7 @@ import os
 bl_info = {
     "name": "XBG Importer",
     "author": "Quiet Joker, JasperZebra",
-    "version": (2, 1, 2),
+    "version": (2, 1, 5),
     "blender": (5, 0, 0),
     "location": "View3D > Sidebar > XBG Import",
     "description": "Import XBG models from James Cameron's Avatar The Game",
