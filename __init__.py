@@ -263,7 +263,7 @@ class XBG_OT_Import(bpy.types.Operator):
                     ds.flip_normals, ds.use_xml_assembly, ds.separate_primitives,
                     ds.show_format_bounds, ds.import_xbt_as_dds,
                     ds.use_mb2o,  # MB2O parameter
-                    ds.compact_vertices  # NEW: Vertex compaction parameter
+                    ds.compact_vertices,  # NEW: Vertex compaction parameter
                     ds.reorient_bones,  # NEW: Bone Orientation
                 )
                 ic += 1
