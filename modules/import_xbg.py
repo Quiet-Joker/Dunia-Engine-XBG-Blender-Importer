@@ -274,7 +274,7 @@ class XBGParser:
 
 
 class XBGBlenderImporter:
-    def load(self, ctx, fp, lod=0, imo=False, df="", lt=True, lhd=True, fn=True, uxa=True, sp=False, sfb=False, iad=False, use_mb2o=False, compact_vertices=True):  # NEW: compact_vertices parameter
+    def load(self, ctx, fp, lod=0, imo=False, df="", lt=True, lhd=True, fn=True, uxa=True, sp=False, sfb=False, iad=False, use_mb2o=False, compact_vertices=True, reorient_bones=False):
         vlog.log(f"\n{'#'*60}\n# XBG IMPORT STARTED\n# File: {os.path.basename(fp)}\n{'#'*60}")
         
         xb = {}
@@ -300,7 +300,7 @@ class XBGBlenderImporter:
         
         ao = None
         if not imo:
-            ao = self.create_armature(data.skeleton, os.path.basename(fp))
+            ao = self.create_armature(data.skeleton, os.path.basename(fp), reorient_bones=reorient_bones)
         
         mos = self.create_meshes(
             data.meshes, ao, data.materials, imo, df, lt, lhd,
@@ -345,7 +345,7 @@ class XBGBlenderImporter:
         
         return {'FINISHED'}
     
-    def create_armature(self, skel, nb):
+    def create_armature(self, skel, nb, reorient_bones=False):
         if skel.get_bone_count() == 0:
             return None
         
@@ -423,6 +423,65 @@ class XBGBlenderImporter:
                     off.rotate(rot)
                     e.tail = e.head + off
         
+        # Bone reorientation: point each bone's tail toward its children's heads.
+        # IMPORTANT: must run BEFORE mode_set('OBJECT') — edit bone handles are
+        # only valid while the armature stays in EDIT mode. Accessing eb[] after
+        # leaving and re-entering EDIT mode causes a crash (stale C pointers).
+        if reorient_bones:
+            # Build children map: parent_index -> [valid child indices]
+            # Exclude self-references: some XBG files store parent_id == own index on
+            # the root bone (e.g. 0 -> 0).  Without this guard the root appears in its
+            # own children list and the tail-direction average is corrupted.
+            children_map = {}
+            for j, bd in enumerate(skel.bones):
+                pid = bd.parent_id
+                if pid is not None and pid != j and pid in eb and j in eb:
+                    children_map.setdefault(pid, []).append(j)
+
+            MIN_BONE_LEN = 0.05  # prevent zero-length bones (Blender will crash)
+
+            for i in eb:
+                e  = eb[i]
+                bd = skel.bones[i]
+                pid = bd.parent_id
+                has_real_parent = pid is not None and pid != i and pid in eb
+                children = [ci for ci in children_map.get(i, []) if ci in eb]
+
+                if has_real_parent and children:
+                    # Interior bone: aim tail at the average of all direct child heads.
+                    avg = mathutils.Vector()
+                    for ci in children:
+                        avg += eb[ci].head
+                    avg /= len(children)
+
+                    if (avg - e.head).length >= MIN_BONE_LEN:
+                        e.tail = avg
+                    # else: children collapsed onto this bone — keep world-matrix tail
+
+                elif has_real_parent:
+                    # Leaf / end-of-chain bone: extend away from parent along the
+                    # parent->self direction (continues the visual line of the chain).
+                    #
+                    # Threshold note: MIN_BONE_LEN (0.05) is the minimum FINAL bone
+                    # length Blender needs to avoid a zero-length crash, but it must NOT
+                    # be used as the gate for whether we USE the away direction.
+                    # e.g. wasp wing bones sit only 0.048 units from Pelvis — valid
+                    # geometry, but 0.048 < 0.05 so the old >= MIN_BONE_LEN check was
+                    # silently discarding their direction and falling back to the
+                    # arbitrary world-matrix tail, producing giant off-screen bones.
+                    #
+                    # Fix: gate on > 0.001 (just avoids division-by-zero), then clamp
+                    # the final length UP to MIN_BONE_LEN so Blender never sees a
+                    # degenerate bone while still honouring the correct direction.
+                    away = e.head - eb[pid].head
+                    if away.length > 0.001:
+                        e.tail = e.head + away.normalized() * max(away.length, MIN_BONE_LEN)
+                    # else: head truly coincides with parent — keep world-matrix tail
+
+                # else: root bone (no real parent) — keep the compact world-matrix tail
+                # set in the first pass above.  Root bones are reference/origin bones;
+                # stretching them toward their children creates a misleadingly large bone.
+
         bpy.ops.object.mode_set(mode='OBJECT')
         vlog.log(f"Created armature: {an}")
         
