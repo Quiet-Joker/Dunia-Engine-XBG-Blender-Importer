@@ -106,6 +106,7 @@ Confirmed working on:
 
 ## Credits
 
-**Author:** Quiet Joker  
-Original script by the Avatar modding community (Blender 2.49b era).  
+**Author:** Quiet Joker
+**Special thanks:** Jasper_Zebra
+**Original script:** Szkaradek123 for the Avatar modding community (Blender 2.49b era).  
 Rewritten for Blender 5.0 with AI assistance.
