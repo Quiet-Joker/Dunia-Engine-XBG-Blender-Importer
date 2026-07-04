@@ -177,7 +177,7 @@ experiment in one game can never break another.
 
 **Author:** Quiet Joker
 
-**Special thanks:** Jasper_Zebra
+**Special thanks:** Jasper_Zebra, legendhavoc175, qstlijku
 
 **Original script:** Szkaradek123 for the Avatar modding community (Blender 2.49b era). 
 
