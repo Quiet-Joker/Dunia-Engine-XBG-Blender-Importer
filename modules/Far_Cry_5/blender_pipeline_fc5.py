@@ -352,6 +352,11 @@ def _load_fc3_or_fc4(ctx, fp, version, game_name, lod, separate, lhd):
                     n_faces = (idx_e - idx_s) // 3
                     face_start = (idx_s - vb_idx_base) // 3
                     face_slice = vb['faces'][face_start: face_start + n_faces]
+                    # Skip degenerate (repeated-vertex) triangles — see the
+                    # combined-mode note above for why these must never reach
+                    # normals_split_custom_set().
+                    face_slice = [f for f in face_slice
+                                  if f[0] != f[1] and f[1] != f[2] and f[0] != f[2]]
                     if not face_slice:
                         continue
 
@@ -489,6 +494,14 @@ def _load_fc3_or_fc4(ctx, fp, version, game_name, lod, separate, lhd):
                     face_mat_list = [vb_idx] * len(vb_faces)
 
                 for fi, (fa, fb, fc_v) in enumerate(vb_faces):
+                    # Skip degenerate (repeated-vertex, zero-area) triangles —
+                    # a handful of source files carry a few of these, and
+                    # feeding them into the combined mesh corrupts Blender's
+                    # internal loop-normal domain enough that the later
+                    # normals_split_custom_set() call segfaults natively
+                    # (not a Python exception — a hard EXCEPTION_ACCESS_VIOLATION).
+                    if fa == fb or fb == fc_v or fa == fc_v:
+                        continue
                     if 0 <= fa < n_verts and 0 <= fb < n_verts and 0 <= fc_v < n_verts:
                         all_faces.append((fa, fb, fc_v))
                         face_mat_idx.append(face_mat_list[fi] if fi < len(face_mat_list) else vb_idx)
