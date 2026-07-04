@@ -32,10 +32,6 @@ toolkit.
   byte-for-byte (verified with byte-identical unedited re-exports), and oversized
   custom geometry automatically expands the file's bounds/precision instead of
   clamping.
-- **Self-maintaining updater** — checks for updates once at Blender startup (silent,
-  non-blocking) and one-click updates sync every file, including brand-new game modules
-  added in future releases.
-
 ---
 
 ## Supported Games
@@ -46,8 +42,8 @@ toolkit.
 | **Far Cry 2** | .xbg | ✅ Full | ✅ auto-load\* + **custom material export** | ✅ | ✅ | ✅ .mab + facial + scenes | ✅ import & export | ✅ import & **export** |
 | **Far Cry 3** | .xbg | ✅ Full | ⚠️ slot names only | ✅ | ✅ | ✅ .mab | ✅ import | ✅ import |
 | **Far Cry 4** | .xbg | ✅ Full | ⚠️ slot names only | ✅ | ✅ | ✅ .mab | — (rig from model) | ✅ import |
-| **Far Cry 5 / New Dawn** | .xbg | ✅ (8-influence skinning) | ⚠️ slot names only | ✅ same-count | ❌ Not yet | ✅ .mab + root motion + prop rigs | — (rig from model) | — |
-| **Far Cry Primal** | .xbg | ✅ Full | ⚠️ slot names only | ✅ | ✅ | 🔜 coming soon | — (rig from model) | — |
+| **Far Cry 5 / New Dawn** | .xbg | ✅ (8-influence skinning) | ⚠️ slot names only  | ✅ same-count | ❌ Not yet | ✅ .mab + root motion + prop rigs | — (rig from model) | — |
+| **Far Cry Primal** | .xbg | ✅ Full | ⚠️ slot names only  | ✅ | ✅ | 🔜 coming soon | — (rig from model) | — |
 | **Far Cry 1** | .cgf | ✅ (per-face materials) | ✅ .dds auto-load | — | — | — | — | — |
 | **Far Cry Instincts** (Xbox) | .xbg | ✅ | ✅ .xbt auto-decode | — | — | — | — | — |
 | **Watch Dogs 1** | .xbg | ✅ Full (+ streamed hi-detail LODs) | ⚠️ slot names only | ✅ | ✅ | ✅ .mab | ✅ import | ✅ import |
@@ -90,16 +86,16 @@ toolkit.
    > Temporarily only supported on Avatar.
 
 > **Upgrading from v2.x?** Do a fresh install from the zip (remove the old add-on
-> first). The old in-app updater can't fetch the new game modules. From v3.0.0 onward,
-> updates are fully automatic.
+> first) — v2.x's game modules are incompatible with v3.0.0's layout.
 
 ### Updates
 
-The add-on checks GitHub for a new version **once automatically at Blender startup**
-(quietly — nothing appears unless there *is* an update, and nothing blocks startup).
-When one is available, the home screen shows an **Update Now** button: one click
-downloads the release and syncs every file — new games and scripts included — then you
-restart Blender.
+There is no in-app updater. To update, download the latest release `.zip` from the
+[Releases](../../releases) page (or grab the `Dev` branch source for the newest
+in-progress fixes) and reinstall it the same way as the initial install — remove the
+old add-on first, then install the new zip. A previous auto-updater was removed in
+v3.0.0 because it could leave the add-on in a broken, un-listed state after applying
+an update; manual reinstall is slower but always leaves you with a known-good copy.
 
 ---
 
@@ -153,9 +149,9 @@ game**. Every game uses the same layout:
 ## Repository Layout
 
 ```
-__init__.py        # add-on entry point (registration, version, update check)
+__init__.py        # add-on entry point (registration, version)
 modules/
-  Core/            # preferences, updater, logging, shared settings
+  Core/            # preferences, logging, shared settings
   UI/              # game picker + one panel file per game
   Avatar/          # per-game format modules — fully self-contained per game
   Far_Cry_1/  Far_Cry_2/  Far_Cry_3/  Far_Cry_4/  Far_Cry_5/
