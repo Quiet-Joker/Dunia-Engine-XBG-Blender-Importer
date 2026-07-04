@@ -185,4 +185,4 @@ Rewritten and expanded for Blender 5.0
 
 ## Want to help?
 
-If you want to help or support the project please leave any bug reports, feature suggestions or if you want to help improve the code, please don't be afraid to leave some pull requests. This is my gift to the entire Avatar/Far Cry/Watch Dogs community.
+If you want to help or support the project please leave any bug reports, upload broken files that the script doesn't support yet, feature suggestions or if you want to help improve the code, please don't be afraid to leave some pull requests. This is my gift to the entire Avatar/Far Cry/Watch Dogs community.
