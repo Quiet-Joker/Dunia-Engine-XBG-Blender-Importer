@@ -1,97 +1,167 @@
-# Avatar XBG Importer for Blender
+# Dunia Engine XBG Importer for Blender
 
-A Blender 5.0 add-on for importing (and re-exporting) XBG 3D models from **James Cameron's Avatar: The Game**.
+A Blender 5.0 add-on for **importing, editing and re-exporting 3D models from ten
+Ubisoft games** — grown from an Avatar-only importer into a full multi-game modding
+toolkit.
 
-> Originally written for Blender 2.49b. This is a ground-up rewrite for modern Blender, built with AI assistance over the course of roughly a year.
+> Originally written for Blender 2.49b. Rewritten from the ground up for modern
+> Blender. Expect bugs, things to fix, things to change and more features coming soon.
 
 ---
 
-## Features
+## Highlights
 
-- Import XBG models with skeleton, skinning, and materials
-- Multi-LOD support — import a specific LOD or all at once
-- **LOD Peek** — scan a file to see its LOD count before importing
-- Re-export / inject modified mesh data back into the original XBG file
-- Automatic texture loading from XBM material files (requires game Data folder)
-- HD texture support (`_mip0` variants)
-- Bounding box and bounding sphere visualization
-- XML assembly support for weapon/part files
-- MB2O skeleton mode for files with bind matrix data
-- Vertex compaction — removes unused vertices for cleaner editing while preserving correct export positions
-- Export normals — recalculated from Blender geometry and re-encoded into the file
+- **Ten games, one add-on** — Avatar: The Game, Far Cry 1 / 2 / 3 / 4 / 5–New Dawn /
+  Primal / Instincts, Watch Dogs 1 & 2, each with its own self-contained module and a
+  clean game-picker UI.
+- **True editing freedom** — not just moving vertices: add and delete geometry, delete
+  whole submeshes, join in foreign meshes, edit UVs and bone weights, then write it all
+  back into a copy of the game file.
+- **Animations** — import skeletal animations (.mab) for six games, facial animation
+  (pose libraries + expression curves) for Avatar/FC2, and even **entire cinematic
+  scenes** with their cameras, anchors and timeline markers.
+- **Skeletons & collision** — import standalone .skeleton rigs; import HKX collision
+  for five games and **export edited collision** (with MOPP rebuilding) for Avatar/FC2 —
+  modify any model's collision shape.
+- **Custom materials** — bake Blender materials into game-ready texture (.xbt) and
+  material (.xbm) files, with DXT compression, template inheritance, glass and glow
+  templates.
+- **LOD control** — import a chosen LOD or all of them, peek a file's LOD count before
+  importing, and edit each mesh's LOD switch distances.
+- **Format-exact round-trips** — injection preserves everything you didn't edit
+  byte-for-byte (verified with byte-identical unedited re-exports), and oversized
+  custom geometry automatically expands the file's bounds/precision instead of
+  clamping.
+- **Self-maintaining updater** — checks for updates once at Blender startup (silent,
+  non-blocking) and one-click updates sync every file, including brand-new game modules
+  added in future releases.
+
+---
+
+## Supported Games
+
+| Game | Format | Model Import | Textures / Materials | Re-export (Inject) | Add/Delete Geometry | Animation | Skeleton File | Collision (HKX) |
+|---|---|---|---|---|---|---|---|---|
+| **Avatar: The Game** | .xbg | ✅ Full (LODs, skin, damage states) | ✅ auto-load + **custom material export** | ✅ | ✅ | ✅ .mab + facial + **full scenes** | ✅ import & export | ✅ import & **export** (MOPP) |
+| **Far Cry 2** | .xbg | ✅ Full | ✅ auto-load + **custom material export** | ✅ | ✅ | ✅ .mab + facial + scenes | ✅ import & export | ✅ import & **export** |
+| **Far Cry 3** | .xbg | ✅ Full | ✅ auto-load | ✅ | ✅ | ✅ .mab | ✅ import | ✅ import |
+| **Far Cry 4** | .xbg | ✅ Full | ✅ auto-load | ✅ | ✅ | ✅ .mab | — (rig from model) | ✅ import |
+| **Far Cry 5 / New Dawn** | .xbg | ✅ (8-influence skinning) | ✅ auto-load | ✅ same-count | ❌ Not yet | ✅ .mab + root motion + prop rigs | — (rig from model) | — |
+| **Far Cry Primal** | .xbg | ✅ Full | ✅ auto-load | ✅ | ✅ | 🔜 coming soon | — (rig from model) | — |
+| **Far Cry 1** | .cgf | ✅ (per-face materials) | ✅ .dds auto-load | — | — | — | — | — |
+| **Far Cry Instincts** (Xbox) | .xbg | ✅ | ✅ .xbt auto-decode | — | — | — | — | — |
+| **Watch Dogs 1** | .xbg | ✅ Full (+ streamed hi-detail LODs) | ✅ | ✅ | ✅ | ✅ .mab | ✅ import | ✅ import |
+| **Watch Dogs 2** | .glm | ✅ Full | ✅ slot names | ✅ **.glm export** | ✅ | — | — (rig from model) | — |
+| Far Cry 6 | — | 🔜 coming soon | | | | | | |
+
+**Legend / footnotes**
+
+- *Re-export (Inject)* always writes to a **new copy** of the game file — your
+  originals are never touched.
+- *Add/Delete Geometry* = full rebuild support: change vertex/triangle counts, delete
+  submeshes, re-skin new geometry from vertex groups. Games without it support
+  reshape/sculpt/UV/color edits at the original vertex count.
+- WD1 vehicles with split LOD buffers and streamed-LOD meshes patch in place (no count
+  changes); WD1 also auto-updates the companion `.high.xbgmip` streamed-LOD file so
+  edits don't "revert" at close range.
+- WD2 export preserves materials/skeleton/physics blocks byte-for-byte and hands you a
+  .glm ready for a GLM2XBG converter.
 
 ---
 
 ## Requirements
 
 - **Blender 5.0** or newer
-- Game files from *James Cameron's Avatar: The Game* (PC version)
+- Game files for the game you want to mod (extracted where the game ships archives —
+  e.g. Avatar's `Data` folder, FC Instincts `.fat/.dat` dumps, Far Cry 1's `FCData`)
 
 ---
 
 ## Installation
 
 1. Download the latest release `.zip` from the [Releases](../../releases) page.
-2. In Blender, go to **Edit → Preferences → Add-ons → Install**.
-3. Select the downloaded `.zip` and click **Install Add-on**.
-4. Enable the **XBG Importer** add-on in the list.
-5. In the add-on preferences, set your extracted **Data Folder** path to the game's `Data` directory (required for texture loading).
+2. In Blender: **Edit → Preferences → Add-ons → Install**, pick the zip, enable
+   **XBG Importer**.
+3. In the add-on preferences, set the data-folder path(s) for your game(s) — this is
+   what powers automatic texture loading. 
+   > Temporarily only supported on Avatar.
+
+> **Upgrading from v2.x?** Do a fresh install from the zip (remove the old add-on
+> first). The old in-app updater can't fetch the new game modules. From v3.0.0 onward,
+> updates are fully automatic.
+
+### Updates
+
+The add-on checks GitHub for a new version **once automatically at Blender startup**
+(quietly — nothing appears unless there *is* an update, and nothing blocks startup).
+When one is available, the home screen shows an **Update Now** button: one click
+downloads the release and syncs every file — new games and scripts included — then you
+restart Blender.
 
 ---
 
-## Usage
+## Using the Add-on
 
-### Importing
+Open the **N-panel** (`N` in the 3D Viewport) → **XBG Import** tab → **pick your
+game**. Every game uses the same layout:
 
-1. Open the **N-panel** (press `N` in the 3D Viewport) and go to the **XBG Import** tab.
-2. Optionally use **Peek LOD Count** to check how many LODs a file has before importing.
-3. Click **Import XBG** and select one or more `.xbg` files.
-4. In the file browser sidebar, choose your LOD level (or enable **Import All LODs**).
+| Panel | Visible | What it does |
+|---|---|---|
+| **Import** | always | Data-folder setting, texture options, LOD peek, the big import button |
+| **Advanced Mode** | always (toggle) | Reveals everything below |
+| **Inject / Export** | advanced | Status of the linked source file, bounds check, the big inject button |
+| **Animation** | advanced | .mab import with resampling/helper options (games with animation) |
+| **Skeleton / HKX** | per game | Standalone skeleton import, collision import/export |
+| **Editors** | advanced | LOD distances, bounding volumes, jiggle bones, materials (Avatar/FC2) |
+| **Model Info / Debug** | advanced | What the importer captured; verbose logging controls |
 
-### Re-Exporting (Inject)
+### Typical workflow: edit a model and put it back in the game
 
-After editing an imported mesh:
+1. **Import** the model with **Separate Primitives ON** (Advanced Mode → import
+   options). This keeps one Blender object per game submesh — required for writing
+   back. (Imported with it off? The object is flagged as *joined* and the inject panel
+   will tell you to re-import.)
+2. **Edit** in Blender: sculpt, move vertices, restructure UVs, repaint vertex colors,
+   assign weights. On games with full rebuild support you can extrude/delete geometry,
+   delete entire submeshes, or `Ctrl+J`-join a completely different mesh into an
+   imported object (make the imported object active so its metadata survives).
+3. Select the edited objects and press the game's **Inject** button. Pick the output
+   path (pre-filled next to the source) — a patched copy is written, ready to pack back
+   into the game.
 
-1. Select the mesh object in the viewport.
-2. In the **XBG Import** panel under **Export (Re-Inject)**, click **Inject Mesh Data**.
-3. The file browser will pre-fill with the original file path. Confirm to write.
+### Typical workflow: view an animation
 
-> ⚠️ Vertex count must not change between import and export. Only vertex positions, UVs, and normals are written back. No vertex deletion or adding supported.
+1. Import the model (the armature is created from the file).
+2. Advanced Mode → **Animation** → pick the `.mab`. Bones are matched automatically
+   (by name hash or skeleton file, depending on the game); options cover smooth
+   resampling, helper-bone emulation and twist baking.
+3. For Avatar/FC2 cinematics, use the **Scene Viewer** to bring in the whole scripted
+   scene — cameras, anchors and timeline markers included.
 
----
+### Typical workflow: custom textures/materials (Avatar, FC2)
 
-## Panel Overview
-
-| Section | Description |
-|---|---|
-| Game Data Folder | Path to the game's `Data` directory for texture loading |
-| Import Options | Texture loading toggles |
-| LOD Preview | Peek LOD count button and result display |
-| Export (Re-Inject) | Bounds check, scale info, PMCP override, inject button |
-| Damage States | Toggle between normal / damaged mesh visibility (shown when applicable) |
-| XBG Debug (closed by default) | Logging, mesh processing options, skeleton mode, vertex compaction, bounding volumes |
-
----
-
-## Known Issues / To-Do
-
-- [ ] Occasional duplicate texture entries when multiple materials reference the same file.
-
----
-
-## Compatibility
-
-Confirmed working on:
-- *James Cameron's Avatar: The Game* (PC)
-- *Far Cry 3* (XBG format shares structural similarities)
-- *Far Cry 2*
+1. Set up your material in Blender on the imported mesh.
+2. Advanced Mode → **Export Custom Materials** — choose a template (standard, glass,
+   glow…), and the add-on bakes game-ready `.xbt` textures + `.xbm` material files into
+   your patch folder.
 
 ---
 
-## Menu Preview
+## Repository Layout
 
-<img width="245" height="1354" alt="image" src="https://github.com/user-attachments/assets/ac9c6e84-9bd4-4349-b315-1722d0ddcdeb" />
-<img width="1541" height="1193" alt="image" src="https://github.com/user-attachments/assets/849e5eb0-53f4-48fc-b622-3aeea6acb86b" />
+```
+__init__.py        # add-on entry point (registration, version, update check)
+modules/
+  Core/            # preferences, updater, logging, shared settings
+  UI/              # game picker + one panel file per game
+  Avatar/          # per-game format modules — fully self-contained per game
+  Far_Cry_1/  Far_Cry_2/  Far_Cry_3/  Far_Cry_4/  Far_Cry_5/
+  Far_Cry_Primal/  Far_Cry_Instincts/  Far_Cry_6/ (placeholder)
+  Watch_Dogs/  Watch_Dogs_2/
+```
+
+Every game's code is deliberately isolated — no cross-game imports — so a fix or
+experiment in one game can never break another.
 
 ---
 
@@ -100,13 +170,20 @@ Confirmed working on:
 | Branch | Description |
 |---|---|
 | `main` / `public` | Stable release |
-| `dev` | Latest work-in-progress with recent fixes and features |
+| `Dev` | Latest work-in-progress with recent fixes and features |
 
 ---
 
 ## Credits
 
 **Author:** Quiet Joker
+
 **Special thanks:** Jasper_Zebra
-**Original script:** Szkaradek123 for the Avatar modding community (Blender 2.49b era).  
-Rewritten for Blender 5.0 with AI assistance.
+
+**Original script:** Szkaradek123 for the Avatar modding community (Blender 2.49b era). 
+
+Rewritten and expanded for Blender 5.0
+
+## Want to help?
+
+If you want to help or support the project please leave any bug reports, feature suggestions or if you want to help improve the code, please don't be afraid to leave some pull requests. This is my gift to the entire Avatar/Far Cry/Watch Dogs community.
