@@ -43,7 +43,7 @@ toolkit.
 | Game | Format | Model Import | Textures / Materials | Re-export (Inject) | Add/Delete Geometry | Animation | Skeleton File | Collision (HKX) |
 |---|---|---|---|---|---|---|---|---|
 | **Avatar: The Game** | .xbg | ✅ Full (LODs, skin, damage states) | ✅ auto-load + **custom material export** | ✅ | ✅ | ✅ .mab + facial + **full scenes** | ✅ import & export | ✅ import & **export** (MOPP) |
-| **Far Cry 2** | .xbg | ✅ Full | ✅ auto-load + **custom material export** | ✅ | ✅ | ✅ .mab + facial + scenes | ✅ import & export | ✅ import & **export** |
+| **Far Cry 2** | .xbg | ✅ Full | ✅ auto-load\* + **custom material export** | ✅ | ✅ | ✅ .mab + facial + scenes | ✅ import & export | ✅ import & **export** |
 | **Far Cry 3** | .xbg | ✅ Full | ⚠️ slot names only | ✅ | ✅ | ✅ .mab | ✅ import | ✅ import |
 | **Far Cry 4** | .xbg | ✅ Full | ⚠️ slot names only | ✅ | ✅ | ✅ .mab | — (rig from model) | ✅ import |
 | **Far Cry 5 / New Dawn** | .xbg | ✅ (8-influence skinning) | ⚠️ slot names only | ✅ same-count | ❌ Not yet | ✅ .mab + root motion + prop rigs | — (rig from model) | — |
@@ -66,6 +66,9 @@ toolkit.
   edits don't "revert" at close range.
 - WD2 export preserves materials/skeleton/physics blocks byte-for-byte and hands you a
   .glm ready for a GLM2XBG converter.
+- \*Far Cry 2 texture auto-load shares Avatar's single "Extracted Game Data" preference
+  field (there's no separate FC2 path setting yet) — point it at your FC2 data folder
+  when working on FC2 files.
 
 ---
 
