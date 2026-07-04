@@ -345,13 +345,24 @@ class XBGDebugSettings(bpy.types.PropertyGroup):
     )
     mab_skeleton_override: bpy.props.StringProperty(
         name="Skeleton (.xbg)",
-        description="Override which rig the .mab bones are matched against. "
-                    "Leave blank to use the .xbg the selected armature was "
-                    "imported from. Set this to a different model .xbg (e.g. the "
-                    "first-person arms / full-body skeleton that matches the "
+        description="FC5 only: override which rig the .mab bones are matched "
+                    "against. Leave blank to use the .xbg the selected armature "
+                    "was imported from. Set this to a different model .xbg (e.g. "
+                    "the first-person arms / full-body skeleton that matches the "
                     "animation) when the active armature is the wrong or a "
                     "partial rig — its bones (names + parents + rest pose) are "
                     "decoded and used for hash matching",
+        subtype='FILE_PATH',
+        default=""
+    )
+    mab_skeleton_override_fc3: bpy.props.StringProperty(
+        name="Skeleton (.skeleton)",
+        description="FC3 only: override which .skeleton file defines the "
+                    "routing-mask bone order the .mab header's per-bone masks "
+                    "are read against. Leave blank to auto-discover a matching "
+                    ".skeleton file next to the .mab/.xbg — set this when the "
+                    "clip's masks don't validate against the auto-discovered file "
+                    "(e.g. a prop/anchor .mab whose skeleton lives elsewhere)",
         subtype='FILE_PATH',
         default=""
     )
