@@ -915,7 +915,7 @@ def parse_xbg(path_or_bytes):
 
     _KNOWN = (b'LTMR', b'LEKS', b'EDON', b'MB2O', b'DIKS', b'DNKS', b'SULC',
               b'ITOM', b'SDOL', b'XOBB', b'HPSB', b'PMCP', b'PMCU', b'FIKS',
-              b'KSRP', b'DHRM', b'ZNRM', b'SDPD')
+              b'KSRP', b'DHRM', b'ZNRM', b'SDPD', b'AHSB')
     for _ in range(n_chunks):
         # FC5 re-sync: some chunks (e.g. LTMR) declare a size shorter than their
         # real content, so advancing by ck_size lands mid-chunk.  If we're not on
