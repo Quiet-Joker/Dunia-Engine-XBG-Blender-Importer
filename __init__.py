@@ -1,7 +1,7 @@
 """XBG Importer — multi-game Ubisoft model/animation tools for Blender.
 
 Layout (2026-06-09 reorganisation):
-    modules/Core/       addon prefs, updater, settings PropertyGroups, log ops
+    modules/Core/       addon prefs, settings PropertyGroups, log ops
     modules/Shared/     game-agnostic binary/debug/chunk helpers
     modules/Avatar/     Avatar: The Game / Far Cry 2 (Dunia) tools
     modules/Far_Cry_3/    Far Cry 3 / 4 tools
@@ -28,9 +28,6 @@ from .modules.Core.debug import VerboseLogger
 
 from .modules.Core.prefs import (
     XBGAddonPreferences,
-    XBG_OT_CheckForUpdates,
-    XBG_OT_ApplyUpdate,
-    startup_update_check,
 )
 from .modules.Core.settings import (
     XBGImportSettings,
@@ -226,8 +223,6 @@ classes = (
     XBGJiggleBoneSettings,
     XBGLodDistItem,
     # core ops
-    XBG_OT_CheckForUpdates,
-    XBG_OT_ApplyUpdate,
     XBG_OT_ResetLog,
     XBG_OT_SaveLog,
     # Avatar / FC2
@@ -443,14 +438,6 @@ def register():
     # captured in the JSONL stream — otherwise the user dismisses the
     # popup and the only evidence of what went wrong is lost.
     VerboseLogger.install_report_capture(classes)
-    # Automatic ONE-TIME update check per Blender session: deferred via a
-    # timer so it never slows Blender's startup, silent on network failure
-    # (offline users see no error banner). Result shows on the game-picker
-    # home screen; further checks are manual via the button.
-    try:
-        bpy.app.timers.register(startup_update_check, first_interval=4.0)
-    except Exception:
-        pass
 
 
 def unregister():
