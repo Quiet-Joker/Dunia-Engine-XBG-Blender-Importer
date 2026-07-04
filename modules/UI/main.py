@@ -85,8 +85,7 @@ class XBG_PT_Panel(bpy.types.Panel):
                              icon="FILE_REFRESH")
             else:
                 box = l.box()
-                box.label(text=f"Update available: {_prefs._update_status}",
-                          icon="INFO")
+                box.label(text="New changes are available", icon="INFO")
                 row = box.row()
                 row.operator("xbg.apply_update", text="Update Now",
                              icon="IMPORT")
