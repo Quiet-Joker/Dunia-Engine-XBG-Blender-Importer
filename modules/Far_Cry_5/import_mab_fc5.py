@@ -135,7 +135,12 @@ def _read_keytimes(d, off, end, max_frame):
 
 # 0x07 = Far Cry New Dawn player clips (same chunked codec; only the m_flags
 # version byte differs from FC5's 0x2f / 0x0f / 0x23).
-_KNOWN_MAB_VERSIONS = (0x07, 0x0f, 0x23, 0x2f)
+# 0x03 = seen on FC5 melee/takedown player-skeleton blocks (e.g.
+# "*_takedownfromabove*_hhmac.mab") — without it here, _parse_anim_block()
+# rejected the real 60+ bone player block outright and the importer fell back
+# to one of the single-bone melee_anchor/weapon prop blocks as "main",
+# producing a near-static 1-bone, 2-keyframe "animation".
+_KNOWN_MAB_VERSIONS = (0x03, 0x07, 0x0f, 0x23, 0x2f)
 
 
 def _find_all(d, sub):
