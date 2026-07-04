@@ -5,7 +5,7 @@ Ubisoft games** — grown from an Avatar-only importer into a full multi-game mo
 toolkit.
 
 > Originally written for Blender 2.49b. Rewritten from the ground up for modern
-> Blender. Expect bugs, things to fix, things to change and more features coming soon.
+> Blender. **Expect bugs, things to fix, things to change and more features coming soon.**
 
 ---
 
