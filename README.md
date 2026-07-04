@@ -44,14 +44,14 @@ toolkit.
 |---|---|---|---|---|---|---|---|---|
 | **Avatar: The Game** | .xbg | ✅ Full (LODs, skin, damage states) | ✅ auto-load + **custom material export** | ✅ | ✅ | ✅ .mab + facial + **full scenes** | ✅ import & export | ✅ import & **export** (MOPP) |
 | **Far Cry 2** | .xbg | ✅ Full | ✅ auto-load + **custom material export** | ✅ | ✅ | ✅ .mab + facial + scenes | ✅ import & export | ✅ import & **export** |
-| **Far Cry 3** | .xbg | ✅ Full | ✅ slot names only (no texture loading yet) | ✅ | ✅ | ✅ .mab | ✅ import | ✅ import |
-| **Far Cry 4** | .xbg | ✅ Full | ✅ slot names only (no texture loading yet) | ✅ | ✅ | ✅ .mab | — (rig from model) | ✅ import |
-| **Far Cry 5 / New Dawn** | .xbg | ✅ (8-influence skinning) | ✅ slot names only (no texture loading yet) | ✅ same-count | ❌ Not yet | ✅ .mab + root motion + prop rigs | — (rig from model) | — |
-| **Far Cry Primal** | .xbg | ✅ Full | ✅ slot names only (no texture loading yet) | ✅ | ✅ | 🔜 coming soon | — (rig from model) | — |
+| **Far Cry 3** | .xbg | ✅ Full | ⚠️ slot names only (no texture loading yet) | ✅ | ✅ | ✅ .mab | ✅ import | ✅ import |
+| **Far Cry 4** | .xbg | ✅ Full | ⚠️ slot names only (no texture loading yet) | ✅ | ✅ | ✅ .mab | — (rig from model) | ✅ import |
+| **Far Cry 5 / New Dawn** | .xbg | ✅ (8-influence skinning) | ⚠️ slot names only (no texture loading yet) | ✅ same-count | ❌ Not yet | ✅ .mab + root motion + prop rigs | — (rig from model) | — |
+| **Far Cry Primal** | .xbg | ✅ Full | ⚠️ slot names only (no texture loading yet) | ✅ | ✅ | 🔜 coming soon | — (rig from model) | — |
 | **Far Cry 1** | .cgf | ✅ (per-face materials) | ✅ .dds auto-load | — | — | — | — | — |
 | **Far Cry Instincts** (Xbox) | .xbg | ✅ | ✅ .xbt auto-decode | — | — | — | — | — |
-| **Watch Dogs 1** | .xbg | ✅ Full (+ streamed hi-detail LODs) | ✅ slot names only | ✅ | ✅ | ✅ .mab | ✅ import | ✅ import |
-| **Watch Dogs 2** | .glm | ✅ Full | ✅ slot names | ✅ **.glm export** | ✅ | — | — (rig from model) | — |
+| **Watch Dogs 1** | .xbg | ✅ Full (+ streamed hi-detail LODs) | ⚠️ slot names only | ✅ | ✅ | ✅ .mab | ✅ import | ✅ import |
+| **Watch Dogs 2** | .glm | ✅ Full | ⚠️ slot names | ✅ **.glm export** | ✅ | — | — (rig from model) | — |
 | Far Cry 6 | — | 🔜 coming soon | | | | | | |
 
 **Legend / footnotes**
