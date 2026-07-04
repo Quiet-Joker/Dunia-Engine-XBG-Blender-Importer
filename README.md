@@ -40,7 +40,7 @@ toolkit.
 |---|---|---|---|---|---|---|---|---|
 | **Avatar: The Game** | .xbg | ✅ Full (LODs, skin, damage states) | ✅ auto-load + **custom material export** | ✅ | ✅ | ✅ .mab + facial + **full scenes** | ✅ import & export | ✅ import & **export** (MOPP) |
 | **Far Cry 2** | .xbg | ✅ Full | ✅ auto-load\* + **custom material export** | ✅ | ✅ | ✅ .mab + facial + scenes | ✅ import & export | ✅ import & **export** |
-| **Far Cry 3** | .xbg | ✅ Full | ⚠️ slot names only | ✅ | ✅ | ✅ .mab | ✅ import | ✅ import |
+| **Far Cry 3** | .xbg | ✅ Full | ⚠️ slot names only | ✅ | ✅ | ⚠️ Partial .mab support | ✅ import | ✅ import |
 | **Far Cry 4** | .xbg | ✅ Full | ⚠️ slot names only | ✅ | ✅ | ✅ .mab | — (rig from model) | ✅ import |
 | **Far Cry 5 / New Dawn** | .xbg | ✅ (8-influence skinning) | ⚠️ slot names only  | ✅ same-count | ❌ Not yet | ✅ .mab + root motion + prop rigs | — (rig from model) | — |
 | **Far Cry Primal** | .xbg | ✅ Full | ⚠️ slot names only  | ✅ | ✅ | 🔜 coming soon | — (rig from model) | — |
