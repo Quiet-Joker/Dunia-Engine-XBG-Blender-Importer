@@ -5,7 +5,6 @@ Split out of the monolithic __init__.py (2026-06-09 refactor).
 import hashlib
 import json
 import os
-import re
 import threading
 import urllib.request
 
@@ -30,8 +29,6 @@ def get_prefs(ctx):
 _REPO_OWNER = "Quiet-Joker"
 _REPO_NAME = "Dunia-Engine-XBG-Blender-Importer"
 _REPO_BRANCH = "Dev"
-_RAW_BASE = ("https://raw.githubusercontent.com/%s/%s/%s/"
-             % (_REPO_OWNER, _REPO_NAME, _REPO_BRANCH))
 _ZIP_URL = ("https://github.com/%s/%s/archive/refs/heads/%s.zip"
             % (_REPO_OWNER, _REPO_NAME, _REPO_BRANCH))
 # Git tree API: lists every file's git blob SHA for a branch in one small
@@ -40,7 +37,7 @@ _ZIP_URL = ("https://github.com/%s/%s/archive/refs/heads/%s.zip"
 _TREE_URL = ("https://api.github.com/repos/%s/%s/git/trees/%s?recursive=1"
              % (_REPO_OWNER, _REPO_NAME, _REPO_BRANCH))
 
-_update_status = None   # None = not checked, "up_to_date", or "vX.X.X available"
+_update_status = None   # None = not checked, "up_to_date", or "New changes are available"
 _update_error  = None   # set if network fetch failed
 _startup_checked = False  # auto-check runs once per Blender session
 
@@ -92,20 +89,6 @@ def _local_tree(plugin_dir):
     return out
 
 
-def _fetch_remote_version():
-    """Fetch remote __init__.py and return version tuple, or None on failure."""
-    try:
-        url = _RAW_BASE + "__init__.py"
-        req = urllib.request.urlopen(url, timeout=8)
-        text = req.read(4096).decode("utf-8", errors="ignore")
-        m = re.search(r'"version"\s*:\s*\((\d+),\s*(\d+),\s*(\d+)\)', text)
-        if m:
-            return (int(m.group(1)), int(m.group(2)), int(m.group(3)))
-    except Exception:
-        pass
-    return None
-
-
 def _addon_plugin_dir():
     """this file lives in modules/Core/ — the addon root is two levels up."""
     return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -130,16 +113,11 @@ def _check_update_thread(silent=False):
     local_tree = _local_tree(_addon_plugin_dir())
 
     # Any content difference — new file, removed file, or changed file —
-    # means the Dev branch source has actually moved on, regardless of
-    # whether bl_info's version tuple was bumped.
-    changed = remote_tree != local_tree
-
-    remote_version = _fetch_remote_version()
-    if changed:
-        if remote_version:
-            _update_status = f"v{remote_version[0]}.{remote_version[1]}.{remote_version[2]} available"
-        else:
-            _update_status = "Update available"
+    # means the Dev branch source has actually moved on. No version number
+    # is shown: bl_info's tuple isn't a reliable signal (it isn't bumped for
+    # every push), so the message is deliberately generic.
+    if remote_tree != local_tree:
+        _update_status = "New changes are available"
     else:
         _update_status = "up_to_date"
 
