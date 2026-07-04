@@ -12,7 +12,7 @@ This file only assembles the pieces and registers them.
 """
 
 bl_info = {
-    "name": "XBG Importer",
+    "name": "Dunia Engine XBG Blender Importer",
     "author": "Quiet Joker, Jasper_Zebra",
     "version": (3, 0, 0),
     "blender": (5, 0, 0),
