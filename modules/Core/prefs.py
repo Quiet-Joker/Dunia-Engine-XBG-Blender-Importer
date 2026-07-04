@@ -92,9 +92,11 @@ class XBGAddonPreferences(bpy.types.AddonPreferences):
     # silently fail to bind (get_prefs() returns None, panel draws crash)
     bl_idname = ADDON_ID
     data_folder: bpy.props.StringProperty(
-        name="Avatar Game — Extracted Game Data",
-        description="Path to the Avatar game's extracted game-data folder "
-                    "(the original unpacked files are read from here)",
+        name="Avatar / Far Cry 2 — Extracted Game Data",
+        description="Path to the extracted game-data folder for Avatar: The "
+                    "Game or Far Cry 2 (shared by both — point it at whichever "
+                    "game's data you're working with; the original unpacked "
+                    "files are read from here)",
         default="",
         subtype='DIR_PATH'
     )
